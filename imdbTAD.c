@@ -1,42 +1,33 @@
-//
-// Created by juan on 7/5/2021.
-//
-
 #include "imdbTAD.h"
+#include <stdio.h>
+#include <stdlib.h>
 
-typedef struct tNodeSeries{
-    char * Title;
-    unsigned int EndYear;
-    char * Genres;
-    float Rating;
-    unsigned long Votes;
-    struct tNodeSeries * tail;
-}tNodeSeries;
-
-typedef tNodeSeries * tListSeries
-
-typedef struct tNodeMovies{
+typedef struct tNode{
     char * Title;
     char * Genres;
     float Rating;
     unsigned long Votes;
-    unsigned int RunTimeMinutes;
-    struct tNodeMovies * tail;
-}tNodeMovies;
+    struct tNode * tail;
+}tNode;
 
-typedef tNodeMovies * tListMovies
+typedef tNode * tList;
 
 typedef struct tNodeYear{
     unsigned int Year;
     unsigned int NumMovies;
     unsigned int NumSeries;
     struct tNodeYear * tail;
-    tListSeries * firstSeries;
-    tListMovies * firstMovies;
+    tList * firstSeries;
+    tList * firstMovies;
 }tNodeYear;
 
-typedef tNodeYear * tListYear
+typedef tNodeYear * tListYear;
 
 typedef struct imdbCDT{
     tListYear * first;
 }imdbCDT;
+
+imdbADT new(){
+    return calloc(1, sizeof(imdbCDT));
+}
+
