@@ -108,6 +108,7 @@ static tList addRecType(tList first, tList node)
 }
 
 static tListGenre addRecGenre(tListGenre first, char * genre){
+    int c;
     if(first ==NULL || (c=strcmp(genre, first->genre))<0){
         tListGenre newGenre=malloc(sizeof(tNodeGenre));
         newGenre->genre=copy(genre);
@@ -145,7 +146,7 @@ static tListYear addRec(tListYear first, int year, char *type, tList node)
             newYear->firstMovies = node;
             char * genre=strtok(node->genres, ",");
             while(genre!=NULL) {
-                newYear->firstGenre = addRecGenre(NewYear->firstGenre, genre);
+                newYear->firstGenre = addRecGenre(newYear->firstGenre, genre);
                 genre = strtok(NULL, ",");
             }
         }
