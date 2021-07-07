@@ -102,38 +102,47 @@ static tListYear addRec(tListYear first, int year, char *type, tList node)
 {
     if (first == NULL || year > first->year)
     {
-        int class=0;
+        int class;
         if(strcmp(type, "movie") == 0)
             class = 1;
         else if(strcmp(type, "tvSeries") == 0)
-            class = 2;
+            class = 0;
         else
             return NULL;
-
         tListYear newYear = calloc(1, sizeof(tNodeYear));
         if (newYear == NULL)
             noMemoryAbort();
-
         newYear->year = year;
         newYear->tail = first;
-        if (class==1)
+        if (class==1){
             newYear->firstMovies = node;
-        else
+            newYear->numMovies++;
+        }
+        else{
             newYear->firstSeries = node;
-
+            newYear->numSeries++;
+        }
         return newYear;
     }
     if (year == first->year)
     {
-        if (strcmp(type, "movie") == 0)
+        // cambios
+        if (strcmp(type, "movie") == 0){
+            // se agrega una pelicula
             first->firstMovies = addRecType(first->firstMovies, node);
-        else
+            first->numMovies++;
+        }else if ( strcmp(type,"tvSeries") == 0){
+            // se agrega una serie
             first->firstSeries = addRecType(first->firstSeries, node);
+            first->numSeries++;
+        }
+        // si no era ni pelicula ni serie, simplemente devuelvo lo que estaba pues no hay nada a insertar
         return first;
     }
     first->tail = addRec(first->tail, year, type, node);
     return first;
 }
+
 
 imdbADT add(FILE *arch, imdbADT imdb)
 {
@@ -178,6 +187,21 @@ imdbADT add(FILE *arch, imdbADT imdb)
 }
 
 
+static void toBegin(imdbADT imdb)
+{
+    imdb->current = imdb->first;
+}
 
+static int hasNext(imdbADT imdb)
+{
+    return imdb->current != NULL;
+}
+
+static tListYear next(imdbADT imdb)
+{
+    tListYear toreturn = imdb->current;
+    imdb->current = imdb->current->tail;
+    return toreturn;
+}
 
 
