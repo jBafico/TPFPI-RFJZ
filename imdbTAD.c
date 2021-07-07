@@ -345,6 +345,7 @@ void query2(FILE * arch, imdbADT imdb) {
             fprintf(arch, "%d;%s;%d", year->year, aux->genre, aux->cantMovies);
         }
     }
+    fclose(arch);
 }
 
 void query3(FILE *arch, imdbADT imdb){
