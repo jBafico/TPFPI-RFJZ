@@ -277,6 +277,3 @@ void query3(FILE *arch, imdbADT imdb){
     }
     fclose(arch);
 }
-
-
-
