@@ -5,7 +5,9 @@
 #define OK 1
 #define NOTOK 0
 #define QUERYAMOUNT 4
-enum querys {Q1=0,Q2,Q3,Q4}; 
+enum querys {Q1=0,Q2,Q3,Q4};
+void initFiles(FILE **filevec);
+int checkarg(int argc);
 
 int main(int argc, char *filenames[])
 {
@@ -23,7 +25,7 @@ int main(int argc, char *filenames[])
     FILE *q1,*q2,*q3,*q4;
     FILE *filevec[] = {q1,q2,q3,q4};
     initFiles(filevec);
-    add(arch);
+    add(arch, imdb);
     query1(filevec[Q1],imdb);
     query2(filevec[Q2],imdb);
     query3(filevec[Q3],imdb);
