@@ -217,13 +217,14 @@ imdbADT add(FILE *arch, imdbADT imdb)
 void query2(FILE * arch, imdbADT imdb){
     imdb->current=toBegin(imdb);
     fprintf(arch,"%s;%s;%s", "year", "genre", "films");
-    while(hasNext(imdb->current)){
-        tListYear year=next(imdb->current);
+    while(hasNext(imdb)){
+        tListYear year=next(imdb);
         tListGenre aux=year->firstGenre;
         for(;aux!=NULL; aux=aux->tail){
             fprintf(arch, "%d;%s;%d", year->year, aux->genre, aux->cantMovies);
         }
     }
+    fclose(arch);
 }
 
 
