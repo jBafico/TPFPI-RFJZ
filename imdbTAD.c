@@ -7,6 +7,14 @@
 typedef struct tNode *tList;
 typedef struct tNodeYear *tListYear;
 
+typedef struct tNodeGenre{
+    char * genre;
+    unsigned int num;
+    struct tNodeGenre * tail;
+}tNodeGenre;
+
+typedef tNodeGenre * tListGenre;
+
 typedef struct tNode
 {
     char *title;
@@ -24,6 +32,7 @@ typedef struct tNodeYear
     tListYear tail;
     tList firstSeries;
     tList firstMovies;
+    tListGenre firstGenre;
 } tNodeYear;
 
 typedef struct imdbCDT
@@ -98,6 +107,22 @@ static tList addRecType(tList first, tList node)
     return first;
 }
 
+static tListGenre addRecGenre(tListGenre first, char * genre){
+    if(first ==NULL || (c=strcmp(genre, first->genre))<0){
+        tListGenre newGenre=malloc(sizeof(tNodeGenre));
+        newGenre->genre=copy(genre);
+        newGenre->tail=first;
+        newGenre->num=1;
+        return newGenre;
+    }
+    if(c==0){
+        first->num+=1;
+        return first;
+    }
+    first->tail=addRecGenre(first->tail, genre);
+    return first;
+}
+
 static tListYear addRec(tListYear first, int year, char *type, tList node)
 {
     if (first == NULL || year > first->year)
@@ -125,8 +150,14 @@ static tListYear addRec(tListYear first, int year, char *type, tList node)
     }
     if (year == first->year)
     {
-        if (strcmp(type, "movie") == 0)
+        if (strcmp(type, "movie") == 0){
             first->firstMovies = addRecType(first->firstMovies, node);
+            char * genre=strtok(node->genres, ",");
+            while(genre!=NULL){
+                first->firstGenre=addRecGenre(first->firstGenre, genre);
+                genre=strtok(NULL, ",");
+            }
+        }
         else
             first->firstSeries = addRecType(first->firstSeries, node);
         return first;
@@ -177,7 +208,12 @@ imdbADT add(FILE *arch, imdbADT imdb)
     }
 }
 
+void query2(FILE * arch, imdbADT imdb){
+    imdb->current=toBegin(imdb);
+    while(hasNext(imdb->current)){
 
+    }
+}
 
 
 
