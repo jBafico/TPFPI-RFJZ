@@ -3,9 +3,11 @@
 #include <stdlib.h>
 #include <string.h>
 #define BLOCK 10
+#define MINVOTES 100000 //minima cantidad de votos para entrar en mostPopularList
 
 typedef struct tNode *tList;
 typedef struct tNodeYear *tListYear;
+typedef struct tNodeMostPopular * tListMostPopular;
 
 typedef struct tNodeGenre{
     char * genre;
@@ -35,11 +37,29 @@ typedef struct tNodeYear
     tListGenre firstGenre;
 }tNodeYear;
 
+typedef struct tElemMostPopular{
+    char *title;
+    int year;
+    float rating;
+    unsigned long votes;
+}tElemMostPopular;
+
+typedef struct tNodeMostPopular{
+    tElemMostPopular head;
+    struct tNodeMostPopular * tail;
+}tNodeMostPopular;
+
+typedef struct tMostPopularData{
+    unsigned int size; //el tamano de la lista de mostPopular, maximo 100
+    tListMostPopular first;
+}tMostPopularData;
+
 typedef struct imdbCDT
 {
     tListYear first;
     tListYear current;
-}imdbCDT;
+    tMostPopularData mostPopularData;
+} imdbCDT;
 
 static void noMemoryAbort(void)
 {
@@ -176,8 +196,70 @@ static tListYear addRec(tListYear first, int year, char *type, tList node)
     return first;
 }
 
+static tListMostPopular addrecMP(tListMostPopular list,tElemMostPopular elem) //va a estar ordenada de men a may rating
+{
+    if ( list == NULL || list->head.rating > elem.rating || ((list->head.rating == elem.rating) && (elem.votes <= list->head.votes))  ){
+        //que pasa cuando el tamano ya era 100
+        tListMostPopular newnode = malloc(sizeof(tNodeMostPopular));
+        newnode->head = elem;
+        newnode->tail = list;
+        return newnode;
+    }
+    list->tail = addrecMP(list->tail,elem);
+    return list;
+}
 
-imdbADT add(FILE *arch, imdbADT imdb)
+static tListMostPopular deletefirst(tListMostPopular first)
+{
+    tListMostPopular aux = first->tail;
+    free(first);
+    return aux;
+}
+
+void addMostPopular(imdbADT imdb, tList newNode, int year){
+    if (newNode->votes < MINVOTES)
+        return;
+    if (imdb->mostPopularData.size == 100 && ( (imdb->mostPopularData.first->head.rating > newNode->rating) || ((imdb->mostPopularData.first->head.rating == newNode->rating) && imdb->mostPopularData.first->head.votes >= newNode->rating) ) ){
+        return;
+    }
+
+    tListMostPopular newNodeMostPopular = malloc(sizeof(tNodeMostPopular));
+    if (newNodeMostPopular == NULL) //podemos hacer una funcion aux para esto
+        noMemoryAbort();
+
+    tElemMostPopular newElem = newNodeMostPopular->head;
+    //esto lo puedo convertir a funcion aux ---
+    newElem.title = newNode->title;//copie el puntero de newnode, cuidado de no freear antes de tiempo o modificar el string
+    newElem.votes = newNode->votes;
+    newElem.rating = newNode->rating;
+    newElem.year = year;
+    if ( imdb->mostPopularData.size == 100)
+    {
+        imdb->mostPopularData.first = deletefirst(imdb->mostPopularData.first);
+    }
+    else{
+        imdb->mostPopularData.size++;
+    }
+    imdb->mostPopularData.first = addrecMP(imdb->mostPopularData.first, newElem);
+}
+
+void printMostPopularRec(tListMostPopular list,FILE *out)
+{
+    if ( list == NULL)
+        return;
+    printMostPopularRec(list->tail,out);
+    fprintf(out,"%d,%s,%f,%lu\n",list->head.year,list->head.title,list->head.rating,list->head.votes);
+}
+
+//funcion que copie los datos de la lista a un archivo
+void query4(FILE* out,imdbADT imdb)
+{
+    fprintf(out,"startYear;primaryTitle;numVotes;averageRating\n");
+    printMostPopularRec(imdb->mostPopularData.first,out);
+    fclose(out);
+}
+
+void add(FILE *arch, imdbADT imdb)
 {
     while (!feof(arch))
     {
@@ -215,6 +297,7 @@ imdbADT add(FILE *arch, imdbADT imdb)
             }
             token = strtok(NULL, ";");
         }
+        addMostPopular(imdb, newNode, year);
         imdb->first = addRec(imdb->first, year, type, newNode);
     }
 }
