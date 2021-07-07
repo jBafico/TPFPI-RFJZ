@@ -204,4 +204,16 @@ static tListYear next(imdbADT imdb)
     return toreturn;
 }
 
+void query1(FILE *arch, imdbADT imdb)
+{
+    fprintf(arch, "year;films;series\n");
+    tobegin(imdb);
+    tListYear aux;
 
+    while (hasNext(imdb))
+    {
+        aux = next(imdb);
+        fprintf(arch, "%u;%u;%u\n", aux->year, aux->numMovies, aux->numSeries);
+    }
+    fclose(arch);
+}
