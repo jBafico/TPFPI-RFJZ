@@ -12,7 +12,7 @@ typedef struct tNode
     char *title;
     char *genres;
     float rating;
-    unsigned long votes;
+    size_t votes;
     tList tail;
 } tNode;
 
@@ -30,7 +30,7 @@ typedef struct imdbCDT
 {
     tListYear first;
     tListYear current;
-} imdbCDT;
+}imdbCDT;
 
 static void noMemoryAbort(void)
 {
@@ -177,7 +177,21 @@ imdbADT add(FILE *arch, imdbADT imdb)
     }
 }
 
-
+void query3(FILE *arch, imdbADT imdb){
+    fprintf(arch, "startYear;film;votesFilm;ratingFilm;serie;votesSerie;ratingSerie\n");
+    toBegin(imdb);
+    tListYear aux;
+    while(hasNext(imdb)) {
+        aux=next(imdb);
+        if(aux->numMovies == 0)
+            fprintf(arch, "%u; ; ; ;%s;%lu;%f\n", aux->year, aux->firstSeries->title, aux->firstSeries->votes, aux->firstSeries->rating);
+        else if(aux->numSeries == 0)
+            fprintf(arch, "%u;%s;%lu;%f; ; ; \n", aux->year, aux->firstMovies->title, aux->firstMovies->votes, aux->firstMovies->rating);
+        else
+            fprintf(arch, "%u;%s;%lu;%f;%s;%lu;%f\n", aux->year, aux->firstMovies->title, aux->firstMovies->votes, aux->firstMovies->rating, aux->firstSeries->title, aux->firstSeries->votes, aux->firstSeries->rating);
+    }
+    fclose(arch);
+}
 
 
 
