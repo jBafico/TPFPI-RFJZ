@@ -13,5 +13,6 @@ void query2(FILE *arch, imdbADT imdb);
 void query3(FILE *arch, imdbADT imdb);
 void query4(FILE *out, imdbADT imdb);
 void add(FILE *arch, imdbADT imdb);
+void freeimdb(imdbADT imdb);
 
 #endif //TPF_IMDBTAD_H

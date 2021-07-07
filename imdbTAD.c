@@ -243,12 +243,14 @@ void addMostPopular(imdbADT imdb, tList newNode, int year){
     imdb->mostPopularData.first = addrecMP(imdb->mostPopularData.first, newElem);
 }
 
-void printMostPopularRec(tListMostPopular list,FILE *out)
+static void printMostPopularRec(tListMostPopular list,FILE *out)
 {
     if ( list == NULL)
         return;
     printMostPopularRec(list->tail,out);
     fprintf(out,"%d,%s,%f,%lu\n",list->head.year,list->head.title,list->head.rating,list->head.votes);
+    //todo preguntara a zaka si hay que freear algo mas de su lista o si uso igualdad de punteros
+    free(list);
 }
 
 //funcion que copie los datos de la lista a un archivo
@@ -277,13 +279,13 @@ void add(FILE *arch, imdbADT imdb)
             switch (i)
             {
             case 1:
-                newNode->title = copy(token); //poner funcion copia
+                newNode->title = copy(token);
                 break;
             case 2:
                 year = atoi(token);
                 break;
             case 4:
-                newNode->genres = copy(token); // poner funcion copy
+                newNode->genres = copy(token);
                 break;
             case 5:
                 newNode->rating = atof(token);
@@ -359,4 +361,35 @@ void query3(FILE *arch, imdbADT imdb){
             fprintf(arch, "%u;%s;%lu;%f;%s;%lu;%f\n", aux->year, aux->firstMovies->title, aux->firstMovies->votes, aux->firstMovies->rating, aux->firstSeries->title, aux->firstSeries->votes, aux->firstSeries->rating);
     }
     fclose(arch);
+}
+static void freeRecGenre(tListGenre type){
+    if(type==NULL)
+        return;
+    freeRecGenre(type->tail);
+    free(type->genre);
+    free(type);
+}
+
+static void freeRecType(tList type){
+    if(type==NULL)
+        return;
+    freeRecType(type->tail);
+    free(type->title);
+    free(type->genres);
+    free(type);
+}
+
+static void freeRecYear(tListYear year){
+    if(year==NULL)
+        return;
+    freeRecYear(year->tail);
+    freeRecGenre(year->firstGenre);
+    freeRecType(year->firstSeries);
+    freeRecType(year->firstMovies);
+    free(year);
+}
+
+void freeimdb(imdbADT imdb){
+    freeRecYear(imdb->first);
+    free(imdb);
 }

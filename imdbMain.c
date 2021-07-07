@@ -30,10 +30,8 @@ int main(int argc, char *filenames[])
     query2(filevec[Q2],imdb);
     query3(filevec[Q3],imdb);
     query4(filevec[Q4],imdb);
-    // insertar funcion free
-
+    freeimdb(imdb);
     return 0;
-
 }
 
 void initFiles(FILE **filevec)
