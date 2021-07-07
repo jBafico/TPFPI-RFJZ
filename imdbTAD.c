@@ -22,7 +22,7 @@ typedef struct tNode
     float rating;
     size_t votes;
     tList tail;
-} tNode;
+}tNode;
 
 typedef struct tNodeYear
 {
@@ -33,7 +33,7 @@ typedef struct tNodeYear
     tList firstSeries;
     tList firstMovies;
     tListGenre firstGenre;
-} tNodeYear;
+}tNodeYear;
 
 typedef struct imdbCDT
 {
