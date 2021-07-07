@@ -38,12 +38,12 @@ static void noMemoryAbort(void)
     exit(1);
 }
 
-static char *getLineNoLimitFile(FILE *arch)
+static unsigned char *getLineNoLimitFile(FILE *arch)
 {
     int i = 0;
     unsigned char c;
-    char *s = NULL; // para que el primer realloc funcione como malloc
-    while ((c = fgetc(arch)) != '\n' && !feof(arch))
+    unsigned char *s = NULL; // para que el primer realloc funcione como malloc
+    while ((c = fgetc(arch)) != '\n')
     {
         if (i % BLOCK == 0)
             s = realloc(s, i + BLOCK); // multiplicar por sizeof(char) no es necesario
@@ -102,26 +102,31 @@ static tListYear addRec(tListYear first, int year, char *type, tList node)
 {
     if (first == NULL || year > first->year)
     {
+        int class=0;
+        if(strcmp(type, "movie") == 0)
+            class = 1;
+        else if(strcmp(type, "tvSeries") == 0)
+            class = 2;
+        else
+            return NULL;
+
         tListYear newYear = calloc(1, sizeof(tNodeYear));
         if (newYear == NULL)
             noMemoryAbort();
-        if (newYear) // checkear lo del NULL
-            newYear->year = year;
-        if (strcmp(type, "movie") == 0)
-        {
+
+        newYear->year = year;
+        newYear->tail = first;
+        if (class==1)
             newYear->firstMovies = node;
-        }
         else
             newYear->firstSeries = node;
-        newYear->tail = first;
+
         return newYear;
     }
     if (year == first->year)
     {
         if (strcmp(type, "movie") == 0)
-        {
             first->firstMovies = addRecType(first->firstMovies, node);
-        }
         else
             first->firstSeries = addRecType(first->firstSeries, node);
         return first;
@@ -139,7 +144,7 @@ imdbADT add(FILE *arch, imdbADT imdb)
         tList newNode = malloc(sizeof(tNode));
         if (newNode == NULL)
             noMemoryAbort();
-        char *string = getLineNoLimitFile(arch);
+        unsigned char *string = getLineNoLimitFile(arch);
         char *token = strtok(string, ";");
         type = token;
         int flag = 1;
@@ -171,7 +176,6 @@ imdbADT add(FILE *arch, imdbADT imdb)
         imdb->first = addRec(imdb->first, year, type, newNode);
     }
 }
-
 
 
 
