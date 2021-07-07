@@ -8,6 +8,6 @@ typedef struct imdbCDT * imdbADT;
 
 imdbADT new();
 void skipLine(FILE *arch);
-imdbADT add(FILE *arch, imdbADT imdb);
+void add(FILE *arch, imdbADT imdb);
 
 #endif //TPF_IMDBTAD_H
