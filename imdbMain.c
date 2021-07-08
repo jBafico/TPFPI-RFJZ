@@ -18,7 +18,7 @@ int main(int argc, char *filenames[])
     arch = fopen("imdbv2.csv","r");
     if ( arch == NULL )
     {
-        fprintf(stderr,"no se pudo abrir el archivo");
+        fprintf(stderr,"No se pudo abrir el archivo");
         exit(1);
     }
     skipLine(arch);
@@ -42,7 +42,7 @@ void initFiles(FILE **filevec)
         filevec[i] = fopen(filenames[i],"w");
         if ( filevec[i] == NULL )
         {
-            fprintf(stderr,"no se ha podido generar el archivo %s\n",filenames[i]);
+            fprintf(stderr,"No se ha podido generar el archivo %s\n",filenames[i]);
             exit(1);
         }
     }
@@ -52,7 +52,7 @@ int checkarg(int argc)
 {
     if ( argc > ARGAMOUNT || argc < ARGAMOUNT)
     {
-        printf("por favor ingrese un unico archivo a procesar");
+        printf("Por favor ingrese un unico archivo a procesar");
         return NOTOK;
     }
     return OK;
