@@ -87,6 +87,7 @@ static unsigned char *getLineNoLimitFile(FILE *arch)
         s[i++] = c;
     }
     s = realloc(s, i + 1); // Liberamos lo que sobra del ultimo bloque
+    checkNULL(s);
     s[i] = 0;
     return s;
 }
@@ -108,7 +109,7 @@ void skipLine(FILE *arch)
 static char *
 copy(const char * copyFrom){
     unsigned int i=0, j=0;
-    char * copyTo;
+    char * copyTo = NULL;
     for(; copyFrom[j]!='\0'; i++, j++){
         if(i%BLOCK == 0){
             copyTo=realloc(copyTo, sizeof(char) * (BLOCK + i));
@@ -126,6 +127,7 @@ static tList addRecType(tList first, tList node)
 {
     if (first == NULL || node->votes >= first->votes)
     {
+
         node->tail = first;
         return node;
     }
@@ -282,29 +284,30 @@ void add(FILE *arch, imdbADT imdb)
         {
             switch (i)
             {
-            case 1:
-                newNode->title = copy(token);
-                break;
-            case 2:
-                year = atoi(token);
-                break;
-            case 4:
-                newNode->genres = copy(token);
-                break;
-            case 5:
-                newNode->rating = atof(token);
-                break;
-            case 6:
-                newNode->votes = atoi(token);
-                flag = 0;
-                break;
-            default:
-                break;
+                case 1:
+                    newNode->title = copy(token);
+                    break;
+                case 2:
+                    year = atoi(token);
+                    break;
+                case 4:
+                    newNode->genres = copy(token);
+                    break;
+                case 5:
+                    newNode->rating = atof(token);
+                    break;
+                case 6:
+                    newNode->votes = atoi(token);
+                    flag = 0;
+                    break;
+                default:
+                    break;
             }
             token = strtok(NULL, ";");
         }
         addMostPopular(imdb, newNode, year);
         imdb->first = addRec(imdb->first, year, type, newNode);
+        free(string);
     }
 }
 
