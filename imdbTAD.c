@@ -67,6 +67,12 @@ static void noMemoryAbort(void)
     exit(1);
 }
 
+static void checkNULL(void * pointer){
+    if (pointer == NULL)
+        noMemoryAbort();
+}
+
+
 static unsigned char *getLineNoLimitFile(FILE *arch)
 {
     int i = 0;
@@ -74,10 +80,10 @@ static unsigned char *getLineNoLimitFile(FILE *arch)
     unsigned char *s = NULL; // para que el primer realloc funcione como malloc
     while ((c = fgetc(arch)) != '\n')
     {
-        if (i % BLOCK == 0)
+        if (i % BLOCK == 0){
             s = realloc(s, i + BLOCK); // multiplicar por sizeof(char) no es necesario
-        if (s == NULL)
-            noMemoryAbort();
+            checkNULL(s);
+        }
         s[i++] = c;
     }
     s = realloc(s, i + 1); // Liberamos lo que sobra del ultimo bloque
@@ -85,12 +91,13 @@ static unsigned char *getLineNoLimitFile(FILE *arch)
     return s;
 }
 
+
 imdbADT new(){
     imdbADT newIMDB=calloc(1, sizeof(imdbCDT));
-    if(newIMDB == NULL)
-        noMemoryAbort();
+    checkNULL(newIMDB);
     return newIMDB;
 }
+
 
 void skipLine(FILE *arch)
 {
@@ -103,15 +110,14 @@ copy(const char * copyFrom){
     unsigned int i=0, j=0;
     char * copyTo;
     for(; copyFrom[j]!='\0'; i++, j++){
-        if(i%BLOCK == 0)
+        if(i%BLOCK == 0){
             copyTo=realloc(copyTo, sizeof(char) * (BLOCK + i));
-        if(copyTo == NULL)
-            noMemoryAbort();
+            checkNULL(copyTo);
+        }
         copyTo[i]=copyFrom[j];
     }
     copyTo=realloc(copyTo, sizeof(char) * (i+1));
-    if(copyTo == NULL)
-        noMemoryAbort();
+    checkNULL(copyTo);
     copyTo[i]='\0';
     return copyTo;
 }
@@ -131,6 +137,7 @@ static tListGenre addRecGenre(tListGenre first, char * genre){
     int c;
     if(first ==NULL || (c=strcmp(genre, first->genre))<0){
         tListGenre newGenre=malloc(sizeof(tNodeGenre));
+        checkNULL(newGenre);
         newGenre->genre=copy(genre);
         newGenre->tail=first;
         newGenre->cantMovies=1;
@@ -156,8 +163,7 @@ static tListYear addRec(tListYear first, int year, char *type, tList node)
         else
             return NULL;
         tListYear newYear = calloc(1, sizeof(tNodeYear));
-        if (newYear == NULL)
-            noMemoryAbort();
+        checkNULL(newYear);
         newYear->year = year;
         newYear->tail = first;
         if (class==1){
@@ -201,6 +207,7 @@ static tListMostPopular addrecMP(tListMostPopular list,tElemMostPopular elem) //
     if ( list == NULL || list->head.rating > elem.rating || ((list->head.rating == elem.rating) && (elem.votes <= list->head.votes))  ){
         //que pasa cuando el tamano ya era 100
         tListMostPopular newnode = malloc(sizeof(tNodeMostPopular));
+        checkNULL(newnode);
         newnode->head = elem;
         newnode->tail = list;
         return newnode;
@@ -224,8 +231,7 @@ void addMostPopular(imdbADT imdb, tList newNode, int year){
     }
 
     tListMostPopular newNodeMostPopular = malloc(sizeof(tNodeMostPopular));
-    if (newNodeMostPopular == NULL) //podemos hacer una funcion aux para esto
-        noMemoryAbort();
+    checkNULL(newNodeMostPopular);
 
     tElemMostPopular newElem = newNodeMostPopular->head;
     //esto lo puedo convertir a funcion aux ---
@@ -249,7 +255,6 @@ static void printMostPopularRec(tListMostPopular list,FILE *out)
         return;
     printMostPopularRec(list->tail,out);
     fprintf(out,"%d,%s,%f,%lu\n",list->head.year,list->head.title,list->head.rating,list->head.votes);
-    //todo preguntara a zaka si hay que freear algo mas de su lista o si uso igualdad de punteros
     free(list);
 }
 
@@ -268,8 +273,7 @@ void add(FILE *arch, imdbADT imdb)
         int year;
         char *type;
         tList newNode = malloc(sizeof(tNode));
-        if (newNode == NULL)
-            noMemoryAbort();
+        checkNULL(newNode);
         unsigned char *string = getLineNoLimitFile(arch);
         char *token = strtok(string, ";");
         type = token;
@@ -303,6 +307,7 @@ void add(FILE *arch, imdbADT imdb)
         imdb->first = addRec(imdb->first, year, type, newNode);
     }
 }
+
 
 static void toBegin(imdbADT imdb)
 {
