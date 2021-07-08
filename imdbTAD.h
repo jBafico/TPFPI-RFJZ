@@ -1,8 +1,7 @@
-
-
 #ifndef TPF_IMDBTAD_H
 #define TPF_IMDBTAD_H
 #include <stdio.h>
+#define ERROR_CODE -1
 
 typedef struct imdbCDT * imdbADT;
 
@@ -12,7 +11,7 @@ void query1(FILE *arch, imdbADT imdb);
 void query2(FILE *arch, imdbADT imdb);
 void query3(FILE *arch, imdbADT imdb);
 void query4(FILE *out, imdbADT imdb);
-void add(FILE *arch, imdbADT imdb);
+int add(FILE *arch, imdbADT imdb);
 void freeimdb(imdbADT imdb);
 
 #endif //TPF_IMDBTAD_H
