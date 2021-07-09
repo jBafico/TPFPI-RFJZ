@@ -10,10 +10,10 @@ all: back.o front.o
 	$(COMPILER) -o $(OUTPUT_FILE) front.o back.o $(FLAGS_LINK)
 
 front.o: $(FRONT_FILES) $(HEADER_FILES)
-	$(COMPILER) -c $(FRONT_FILES) $(HEADER_FILES) $(FLAGS_COMPL) -o front
+	$(COMPILER) -c $(FRONT_FILES) $(FLAGS_COMPL) -o front.o
 
 back.o: $(BACK_FILES) $(HEADER_FILES)
-	$(COMPILER) -c $(BACK_FILES) $(HEADER_FILES) $(FLAGS_COMPL) -o back
+	$(COMPILER) -c $(BACK_FILES) $(FLAGS_COMPL) -o back.o
 
 clean:
 	rm -r $(OUTPUT_FILE) *.o
