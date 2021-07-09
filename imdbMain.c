@@ -1,10 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "imdbTAD.h"
-
 #define ARGAMOUNT 2
-#define OK 1
-#define NOTOK 0
 #define QUERYAMOUNT 4
 
 enum querys {Q1=0,Q2,Q3,Q4};
@@ -29,7 +26,7 @@ int main(int argc, char *argv[])
     imdb=new();
     if(imdb==NULL || add(arch, imdb)==ERROR_CODE)
         noMemoryAbort();
-    FILE *q1,*q2,*q3,*q4;
+    FILE *q1 = NULL,*q2 = NULL,*q3 = NULL,*q4 = NULL;
     FILE *filevec[] = {q1,q2,q3,q4};
     initFiles(filevec);
     query1(filevec[Q1],imdb);
@@ -55,6 +52,9 @@ void initFiles(FILE **filevec)
         if (filevec[i] == NULL)
         {
             fprintf(stderr,"No se ha podido generar el archivo %s\n",filenames[i]);
+            // si falla en abrirse algun archivo, cierro los otros
+            for ( int j = 0; j < i;j++)
+                fclose(filevec[j]);
             exit(1);
         }
     }

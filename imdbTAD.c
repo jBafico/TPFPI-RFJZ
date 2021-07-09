@@ -2,14 +2,17 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
 #define ADDED 1
 #define NOT_ADDED !ADDED
 #define BLOCK 30
 #define MINVOTES 100000 //minima cantidad de votos para entrar en mostPopularList
 #define MAX_MOVIES 100
+
+enum data {TITLE=1,YEAR=2,GENRES=4,RATING=5,VOTES=6};
+
 typedef struct tNodeYear *tListYear;
 typedef struct tNodeMostPopular * tListMostPopular;
+typedef struct tNodeGenre * tListGenre;
 
 typedef struct tNodeGenre{
     char * genre;
@@ -17,15 +20,12 @@ typedef struct tNodeGenre{
     struct tNodeGenre * tail;
 }tNodeGenre;
 
-typedef tNodeGenre * tListGenre;
-
 typedef struct tNode
 {
     char *title;
     char *genres;
     float rating;
     size_t votes;
-    // tail quitada de tNode
 }tNode;
 
 typedef struct tNodeYear
@@ -48,7 +48,7 @@ typedef struct tElemMostPopular{
 
 typedef struct tNodeMostPopular{
     tElemMostPopular head;
-    struct tNodeMostPopular * tail;
+    tListMostPopular tail;
 }tNodeMostPopular;
 
 typedef struct tMostPopularData{
@@ -66,13 +66,13 @@ typedef struct imdbCDT
 static int checkNULL(void * pointer){
     if (pointer == NULL)
         return ERROR_CODE;
-    return 1;
+    return OK;
 }
 
-static unsigned char *getLineNoLimitFile(FILE *arch, int * controlFlag)
+static char *getLineNoLimitFile(FILE *arch, int * controlFlag)
 {
     int c, i = 0;
-    unsigned char *s = NULL; // para que el primer realloc funcione como malloc
+    char *s = NULL; // para que el primer realloc funcione como malloc
     while ((c = fgetc(arch)) != '\n')
     {
         if(c==EOF)
@@ -94,8 +94,7 @@ static unsigned char *getLineNoLimitFile(FILE *arch, int * controlFlag)
 }
 
 imdbADT new(){
-    imdbADT newIMDB=calloc(1, sizeof(imdbCDT));
-    return newIMDB;
+    return calloc(1, sizeof(imdbCDT));
 }
 
 void skipLine(FILE *arch)
@@ -131,10 +130,10 @@ static tNode addType(tNode first, tNode node, int * controlFlag)
         free(first.title);
         free(first.genres);
         *controlFlag=ADDED;
-        return node;// cambio el nodo, igualdad de estructuras, lo supero en votos
+        return node; //cambio el nodo, lo supero en votos
     }
     *controlFlag=NOT_ADDED;
-    return first; // no lo supero en votos
+    return first; //no lo supero en votos, devuelvo el que ya estaba
 }
 
 static tListGenre addRecGenre(tListGenre first, char * genre, int * controlFlag){
@@ -190,7 +189,6 @@ static tListYear addRec(tListYear first, int year, char *type, tNode node, int *
         }
         newYear->year = year;
         newYear->tail = first;
-        //free(node.genres);
         *controlFlag=ADDED;
         return newYear;
     }
@@ -253,6 +251,7 @@ void addMostPopular(imdbADT imdb, tNode newNode, int year, int * controlFlag){
     newNodeMostPopular.head.rating = newNode.rating;
     newNodeMostPopular.head.year = year;
     newNodeMostPopular.head.title = copy(newNode.title, controlFlag);
+
     if ( imdb->mostPopularData.size == MAX_MOVIES)
         imdb->mostPopularData.first = deletefirst(imdb->mostPopularData.first);
     else
@@ -266,6 +265,7 @@ static void printAndFreeMPrec(tListMostPopular list,FILE *out)
         return;
     printAndFreeMPrec(list->tail,out);
     fprintf(out,"%d,%s,%lu,%.1f\n",list->head.year,list->head.title,list->head.votes,list->head.rating);
+    //Se liberan  los elementos tras insertarse al archivo. Es mas efectivo que recorrer de vuelta la lista
     free(list->head.title);
     free(list);
 }
@@ -279,7 +279,7 @@ static void freeUnused(tNode nodeToDelete){
 
 int add(FILE *arch, imdbADT imdb)
 {
-    unsigned char * string;
+    char * string;
     int controlFlag;
     while ((string = getLineNoLimitFile(arch, &controlFlag)) != NULL)
     {
@@ -287,23 +287,24 @@ int add(FILE *arch, imdbADT imdb)
         char *token = strtok(string, ";");
         char *type= copy(token,&controlFlag);
         tNode newNode;
-        for (int i = 0;i<=6 && controlFlag != ERROR_CODE; i++) //TODO 6 magic number
+        // solo leemos datos hasta los votos, salteamos ending year
+        for (int i = 0;i<=VOTES && controlFlag != ERROR_CODE; i++)
         {
             switch (i)
             {
-                case 1:
+                case TITLE:
                     newNode.title = copy(token, &controlFlag);
                     break;
-                case 2:
+                case YEAR:
                     year = atoi(token);
                     break;
-                case 4:
+                case GENRES:
                     newNode.genres = copy(token, &controlFlag);
                     break;
-                case 5:
+                case RATING:
                     newNode.rating = atof(token);
                     break;
-                case 6:
+                case VOTES:
                     newNode.votes = atoi(token);
                     break;
                 default:
@@ -341,7 +342,7 @@ int add(FILE *arch, imdbADT imdb)
             freeUnused(newNode);
         free(type);
     }
-    return 1;
+    return OK;
 }
 
 static void toBegin(imdbADT imdb)
