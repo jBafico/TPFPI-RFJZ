@@ -26,12 +26,12 @@ int main(int argc, char *argv[])
         exit(1);
     }
     skipLine(arch);
-    FILE *q1,*q2,*q3,*q4;
-    FILE *filevec[] = {q1,q2,q3,q4};
-    initFiles(filevec);
     imdb=new();
     if(imdb==NULL || add(arch, imdb)==ERROR_CODE)
         noMemoryAbort();
+    FILE *q1,*q2,*q3,*q4;
+    FILE *filevec[] = {q1,q2,q3,q4};
+    initFiles(filevec);
     query1(filevec[Q1],imdb);
     query2(filevec[Q2],imdb);
     query3(filevec[Q3],imdb);
@@ -69,10 +69,3 @@ int checkarg(int argc)
     }
     return OK;
 }
-
-
-
-
-
-
-

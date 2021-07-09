@@ -2,10 +2,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#define BLOCK 10
-#define MINVOTES 100000 //minima cantidad de votos para entrar en mostPopularList
 
-typedef struct tNode *tList;
+#define ADDED 1
+#define NOT_ADDED !ADDED
+#define BLOCK 30
+#define MINVOTES 100000 //minima cantidad de votos para entrar en mostPopularList
+#define MAX_MOVIES 100
 typedef struct tNodeYear *tListYear;
 typedef struct tNodeMostPopular * tListMostPopular;
 
@@ -23,7 +25,7 @@ typedef struct tNode
     char *genres;
     float rating;
     size_t votes;
-    tList tail;
+    // tail quitada de tNode
 }tNode;
 
 typedef struct tNodeYear
@@ -32,8 +34,8 @@ typedef struct tNodeYear
     unsigned int numMovies;
     unsigned int numSeries;
     tListYear tail;
-    tList firstSeries;
-    tList firstMovies;
+    tNode mostVotedSeries;
+    tNode mostVotedMovie;
     tListGenre firstGenre;
 }tNodeYear;
 
@@ -67,35 +69,34 @@ static int checkNULL(void * pointer){
     return 1;
 }
 
-static unsigned char *getLineNoLimitFile(FILE *arch, int * memFlag)
+static unsigned char *getLineNoLimitFile(FILE *arch, int * controlFlag)
 {
-    int i = 0;
-    unsigned char c;
+    int c, i = 0;
     unsigned char *s = NULL; // para que el primer realloc funcione como malloc
     while ((c = fgetc(arch)) != '\n')
     {
+        if(c==EOF)
+            return NULL;
         if (i % BLOCK == 0){
             s = realloc(s, i + BLOCK); // multiplicar por sizeof(char) no es necesario
-            *memFlag=checkNULL(s);
-            if(*memFlag==ERROR_CODE)
+            *controlFlag=checkNULL(s);
+            if(*controlFlag==ERROR_CODE)
                 return NULL;
         }
         s[i++] = c;
     }
     s = realloc(s, i + 1); // Liberamos lo que sobra del ultimo bloque
-    *memFlag=checkNULL(s);
-    if(*memFlag==ERROR_CODE)
+    *controlFlag=checkNULL(s);
+    if(*controlFlag==ERROR_CODE)
         return NULL;
     s[i] = 0;
     return s;
 }
 
-
 imdbADT new(){
     imdbADT newIMDB=calloc(1, sizeof(imdbCDT));
     return newIMDB;
 }
-
 
 void skipLine(FILE *arch)
 {
@@ -104,45 +105,47 @@ void skipLine(FILE *arch)
 }
 
 static char *
-copy(const char * copyFrom, int * memFlag){
+copy(const char * copyFrom, int * controlFlag){
     unsigned int i=0, j=0;
     char * copyTo = NULL;
     for(; copyFrom[j]!='\0'; i++, j++){
         if(i%BLOCK == 0){
             copyTo=realloc(copyTo, sizeof(char) * (BLOCK + i));
-            *memFlag=checkNULL(copyTo);
-            if(*memFlag==ERROR_CODE)
+            *controlFlag=checkNULL(copyTo);
+            if(*controlFlag==ERROR_CODE)
                 return NULL;
         }
         copyTo[i]=copyFrom[j];
     }
     copyTo=realloc(copyTo, sizeof(char) * (i+1));
-    *memFlag=checkNULL(copyTo);
-    if(*memFlag==ERROR_CODE)
+    *controlFlag=checkNULL(copyTo);
+    if(*controlFlag==ERROR_CODE)
         return NULL;
     copyTo[i]='\0';
     return copyTo;
 }
 
-static tList addRecType(tList first, tList node)
+static tNode addType(tNode first, tNode node, int * controlFlag)
 {
-    if (first == NULL || node->votes >= first->votes)
-    {
-
-        node->tail = first;
-        return node;
+    if (node.votes > first.votes) {
+        free(first.title);
+        free(first.genres);
+        *controlFlag=ADDED;
+        return node;// cambio el nodo, igualdad de estructuras, lo supero en votos
     }
-    first->tail = addRecType(first->tail, node);
-    return first;
+    *controlFlag=NOT_ADDED;
+    return first; // no lo supero en votos
 }
 
-static tListGenre addRecGenre(tListGenre first, char * genre, int * memFlag){
+static tListGenre addRecGenre(tListGenre first, char * genre, int * controlFlag){
     int c;
     if(first ==NULL || (c=strcmp(genre, first->genre))<0){
         tListGenre newGenre=malloc(sizeof(tNodeGenre));
-        *memFlag=checkNULL(newGenre);
-        newGenre->genre=copy(genre, memFlag);
-        if(*memFlag==ERROR_CODE)
+        *controlFlag=checkNULL(newGenre);
+        if(*controlFlag==ERROR_CODE)
+            return NULL;
+        newGenre->genre=copy(genre, controlFlag);
+        if(*controlFlag==ERROR_CODE)
             return NULL;
         newGenre->tail=first;
         newGenre->cantMovies=1;
@@ -152,184 +155,194 @@ static tListGenre addRecGenre(tListGenre first, char * genre, int * memFlag){
         (first->cantMovies)++;
         return first;
     }
-    first->tail=addRecGenre(first->tail, genre, memFlag);
+    first->tail=addRecGenre(first->tail, genre, controlFlag);
     return first;
 }
 
-static tListYear addRec(tListYear first, int year, char *type, tList node, int * memFlag)
+static tListYear addRec(tListYear first, int year, char *type, tNode node, int * controlFlag)
 {
     if (first == NULL || year > first->year)
     {
-        int class;
-        if(strcmp(type, "movie") == 0)
-            class = 1;
-        else if(strcmp(type, "tvSeries") == 0)
-            class = 0;
-        else
-            return NULL;
         tListYear newYear = calloc(1, sizeof(tNodeYear));
-        *memFlag=checkNULL(newYear);
-        if(*memFlag==ERROR_CODE)
+        *controlFlag=checkNULL(newYear);
+        if(*controlFlag==ERROR_CODE)
             return NULL;
-        newYear->year = year;
-        newYear->tail = first;
-        if (class==1){
-            newYear->firstMovies = node;
+
+        if(!strcmp(type, "movie")) {
+            newYear->mostVotedMovie = node;
             newYear->numMovies++;
-            char * genre=strtok(node->genres, ",");
-            while(genre!=NULL) {
-                newYear->firstGenre = addRecGenre(newYear->firstGenre, genre, memFlag);
-                if(*memFlag==ERROR_CODE)
+            char *genre = strtok(node.genres, ",");
+            while (genre != NULL) {
+                newYear->firstGenre = addRecGenre(newYear->firstGenre, genre, controlFlag);
+                if (*controlFlag == ERROR_CODE)
                     return NULL;
                 genre = strtok(NULL, ",");
             }
         }
-        else{
-            newYear->firstSeries = node;
+        else if(!strcmp(type, "tvSeries")) {
+            newYear->mostVotedSeries = node;
             newYear->numSeries++;
         }
+        else {
+            free(newYear);
+            *controlFlag=NOT_ADDED;
+            return NULL;
+        }
+        newYear->year = year;
+        newYear->tail = first;
+        //free(node.genres);
+        *controlFlag=ADDED;
         return newYear;
     }
     if (year == first->year)
     {
         if (strcmp(type, "movie") == 0){ // se agrega una pelicula
-            first->firstMovies = addRecType(first->firstMovies, node);
             first->numMovies++;
-            char * genre=strtok(node->genres, ",");
+            char * genre=strtok(node.genres, ",");
             while(genre!=NULL){
-                first->firstGenre=addRecGenre(first->firstGenre, genre, memFlag);
-                if(*memFlag==ERROR_CODE)
+                first->firstGenre=addRecGenre(first->firstGenre, genre, controlFlag);
+                if(*controlFlag==ERROR_CODE)
                     return NULL;
                 genre=strtok(NULL, ",");
             }
+            first->mostVotedMovie = addType(first->mostVotedMovie, node, controlFlag);
+            if(*controlFlag==ERROR_CODE)
+                return NULL;
         }
         else if (strcmp(type,"tvSeries") == 0){ // se agrega una serie
-            first->firstSeries = addRecType(first->firstSeries, node);
+            first->mostVotedSeries = addType(first->mostVotedSeries, node, controlFlag);
             first->numSeries++;
         }
         return first; // si no era ni pelicula ni serie, simplemente devuelvo lo que estaba pues no hay nada a insertar
     }
-    first->tail = addRec(first->tail, year, type, node, memFlag);
+    first->tail = addRec(first->tail, year, type, node, controlFlag);
     return first;
 }
 
-static tListMostPopular addrecMP(tListMostPopular list,tElemMostPopular elem, int * memFlag) //va a estar ordenada de men a may rating
+static tListMostPopular addrecMP(tListMostPopular list,tElemMostPopular elem, int * controlFlag) //va a estar ordenada de men a may rating
 {
-    if ( list == NULL || list->head.rating > elem.rating || ((list->head.rating == elem.rating) && (elem.votes <= list->head.votes))  ){
-        //que pasa cuando el tamano ya era 100
+    if ( list == NULL || list->head.rating > elem.rating || ((list->head.rating == elem.rating) && (elem.votes <= list->head.votes)) ){
         tListMostPopular newnode = malloc(sizeof(tNodeMostPopular));
-        *memFlag=checkNULL(newnode);
-        if(*memFlag==ERROR_CODE)
+        *controlFlag=checkNULL(newnode);
+        if(*controlFlag==ERROR_CODE)
             return NULL;
         newnode->head = elem;
         newnode->tail = list;
         return newnode;
     }
-    list->tail = addrecMP(list->tail,elem, memFlag);
+    list->tail = addrecMP(list->tail,elem, controlFlag);
     return list;
 }
 
 static tListMostPopular deletefirst(tListMostPopular first)
 {
     tListMostPopular aux = first->tail;
+    free(first->head.title);
     free(first);
     return aux;
 }
 
-void addMostPopular(imdbADT imdb, tList newNode, int year, int * memFlag){
-    if (newNode->votes < MINVOTES)
+void addMostPopular(imdbADT imdb, tNode newNode, int year, int * controlFlag){
+    if (newNode.votes < MINVOTES)
         return;
-    if (imdb->mostPopularData.size == 100 && ( (imdb->mostPopularData.first->head.rating > newNode->rating) || ((imdb->mostPopularData.first->head.rating == newNode->rating) && imdb->mostPopularData.first->head.votes >= newNode->votes)) )
-        return;
-
-    tListMostPopular newNodeMostPopular = malloc(sizeof(tNodeMostPopular));
-    *memFlag=checkNULL(newNodeMostPopular);
-    if(*memFlag!=1)
+    if (imdb->mostPopularData.size == MAX_MOVIES && ( (imdb->mostPopularData.first->head.rating > newNode.rating) || ((imdb->mostPopularData.first->head.rating == newNode.rating) && imdb->mostPopularData.first->head.votes >= newNode.votes)) )
         return;
 
-    tElemMostPopular newElem = newNodeMostPopular->head;
-    //esto lo puedo convertir a funcion aux ---
-    newElem.title = newNode->title;//copie el puntero de newnode, cuidado de no freear antes de tiempo o modificar el string
-    newElem.votes = newNode->votes;
-    newElem.rating = newNode->rating;
-    newElem.year = year;
-    if ( imdb->mostPopularData.size == 100)
-    {
+    tNodeMostPopular newNodeMostPopular;
+    newNodeMostPopular.head.votes = newNode.votes;
+    newNodeMostPopular.head.rating = newNode.rating;
+    newNodeMostPopular.head.year = year;
+    newNodeMostPopular.head.title = copy(newNode.title, controlFlag);
+    if ( imdb->mostPopularData.size == MAX_MOVIES)
         imdb->mostPopularData.first = deletefirst(imdb->mostPopularData.first);
-    }
-    else{
+    else
         imdb->mostPopularData.size++;
-    }
-    imdb->mostPopularData.first = addrecMP(imdb->mostPopularData.first, newElem, memFlag);
+    imdb->mostPopularData.first = addrecMP(imdb->mostPopularData.first, newNodeMostPopular.head, controlFlag);
 }
 
-static void printMostPopularRec(tListMostPopular list,FILE *out)
+static void printAndFreeMPrec(tListMostPopular list,FILE *out)
 {
     if ( list == NULL)
         return;
-    printMostPopularRec(list->tail,out);
-    fprintf(out,"%d,%s,%f,%lu\n",list->head.year,list->head.title,list->head.rating,list->head.votes);
+    printAndFreeMPrec(list->tail,out);
+    fprintf(out,"%d,%s,%lu,%.1f\n",list->head.year,list->head.title,list->head.votes,list->head.rating);
+    free(list->head.title);
     free(list);
 }
 
-//funcion que copie los datos de la lista a un archivo
-void query4(FILE* out,imdbADT imdb)
-{
-    fprintf(out,"startYear;primaryTitle;numVotes;averageRating\n");
-    printMostPopularRec(imdb->mostPopularData.first,out);
-    fclose(out);
+static void freeUnused(tNode nodeToDelete){
+    if(checkNULL(nodeToDelete.title)!=ERROR_CODE)
+        free(nodeToDelete.title);
+    if(checkNULL(nodeToDelete.genres)!=ERROR_CODE)
+        free(nodeToDelete.genres);
 }
 
 int add(FILE *arch, imdbADT imdb)
 {
-    while (!feof(arch))
+    unsigned char * string;
+    int controlFlag;
+    while ((string = getLineNoLimitFile(arch, &controlFlag)) != NULL)
     {
-        int year, memFlag;
-        char *type;
-        tList newNode = malloc(sizeof(tNode));
-        memFlag=checkNULL(newNode);
-        unsigned char *string = getLineNoLimitFile(arch, &memFlag);
-        if(memFlag==ERROR_CODE)
-            return ERROR_CODE;
+        int year;
         char *token = strtok(string, ";");
-        type = token;
-        int flag = 1;
-        for (int i = 0; flag; i++)
+        char *type= copy(token,&controlFlag);
+        tNode newNode;
+        for (int i = 0;i<=6 && controlFlag != ERROR_CODE; i++) //TODO 6 magic number
         {
             switch (i)
             {
                 case 1:
-                    newNode->title = copy(token, &memFlag);
+                    newNode.title = copy(token, &controlFlag);
                     break;
                 case 2:
                     year = atoi(token);
                     break;
                 case 4:
-                    newNode->genres = copy(token, &memFlag);
+                    newNode.genres = copy(token, &controlFlag);
                     break;
                 case 5:
-                    newNode->rating = atof(token);
+                    newNode.rating = atof(token);
                     break;
                 case 6:
-                    newNode->votes = atoi(token);
-                    flag = 0;
+                    newNode.votes = atoi(token);
                     break;
                 default:
                     break;
             }
             token = strtok(NULL, ";");
         }
-        if(memFlag==ERROR_CODE)
-            return ERROR_CODE;
-        addMostPopular(imdb, newNode, year, &memFlag);
-        imdb->first = addRec(imdb->first, year, type, newNode, &memFlag);
-        if(memFlag==ERROR_CODE)
-            return ERROR_CODE;
         free(string);
+        if (controlFlag == ERROR_CODE)
+        {
+            freeUnused(newNode);
+            free(type);
+            return ERROR_CODE;
+        }
+        if (year > 0)
+        {
+            if ( !strcmp(type,"movie") )
+            {
+                addMostPopular(imdb, newNode, year, &controlFlag);
+                if(controlFlag==ERROR_CODE){
+                    freeUnused(newNode);
+                    free(type);
+                    return ERROR_CODE;
+                }
+            }
+            imdb->first = addRec(imdb->first, year, type, newNode, &controlFlag);
+            if(controlFlag!=ADDED)
+                freeUnused(newNode);
+            if(controlFlag==ERROR_CODE){
+                free(type);
+                return ERROR_CODE;
+            }
+        }
+        else
+            freeUnused(newNode);
+        free(type);
     }
     return 1;
 }
-
 
 static void toBegin(imdbADT imdb)
 {
@@ -364,12 +377,12 @@ void query1(FILE *arch, imdbADT imdb)
 
 void query2(FILE * arch, imdbADT imdb) {
     toBegin(imdb);
-    fprintf(arch, "%s;%s;%s", "year", "genre", "films");
+    fprintf(arch, "%s;%s;%s\n", "year", "genre", "films");
     while (hasNext(imdb)) {
         tListYear year = next(imdb);
         tListGenre aux = year->firstGenre;
         for (; aux != NULL; aux = aux->tail) {
-            fprintf(arch, "%d;%s;%d", year->year, aux->genre, aux->cantMovies);
+            fprintf(arch, "%d;%s;%d\n", year->year, aux->genre, aux->cantMovies);
         }
     }
     fclose(arch);
@@ -382,14 +395,22 @@ void query3(FILE *arch, imdbADT imdb){
     while(hasNext(imdb)) {
         aux=next(imdb);
         if(aux->numMovies == 0)
-            fprintf(arch, "%u; ; ; ;%s;%lu;%f\n", aux->year, aux->firstSeries->title, aux->firstSeries->votes, aux->firstSeries->rating);
+            fprintf(arch, "%u; ; ; ;%s;%lu;%.1f\n", aux->year, aux->mostVotedSeries.title, aux->mostVotedSeries.votes, aux->mostVotedSeries.rating);
         else if(aux->numSeries == 0)
-            fprintf(arch, "%u;%s;%lu;%f; ; ; \n", aux->year, aux->firstMovies->title, aux->firstMovies->votes, aux->firstMovies->rating);
+            fprintf(arch, "%u;%s;%lu;%.1f; ; ; \n", aux->year, aux->mostVotedMovie.title, aux->mostVotedMovie.votes, aux->mostVotedMovie.rating);
         else
-            fprintf(arch, "%u;%s;%lu;%f;%s;%lu;%f\n", aux->year, aux->firstMovies->title, aux->firstMovies->votes, aux->firstMovies->rating, aux->firstSeries->title, aux->firstSeries->votes, aux->firstSeries->rating);
+            fprintf(arch, "%u;%s;%lu;%.1f;%s;%lu;%.1f\n", aux->year, aux->mostVotedMovie.title, aux->mostVotedMovie.votes, aux->mostVotedMovie.rating, aux->mostVotedSeries.title, aux->mostVotedSeries.votes, aux->mostVotedSeries.rating);
     }
     fclose(arch);
 }
+
+void query4(FILE* out,imdbADT imdb)
+{
+    fprintf(out,"startYear;primaryTitle;numVotes;averageRating\n");
+    printAndFreeMPrec(imdb->mostPopularData.first,out);
+    fclose(out);
+}
+
 static void freeRecGenre(tListGenre type){
     if(type==NULL)
         return;
@@ -398,22 +419,15 @@ static void freeRecGenre(tListGenre type){
     free(type);
 }
 
-static void freeRecType(tList type){
-    if(type==NULL)
-        return;
-    freeRecType(type->tail);
-    free(type->title);
-    free(type->genres);
-    free(type);
-}
-
 static void freeRecYear(tListYear year){
     if(year==NULL)
         return;
     freeRecYear(year->tail);
     freeRecGenre(year->firstGenre);
-    freeRecType(year->firstSeries);
-    freeRecType(year->firstMovies);
+    free(year->mostVotedSeries.title);
+    free(year->mostVotedSeries.genres);
+    free(year->mostVotedMovie.genres);
+    free(year->mostVotedMovie.title);
     free(year);
 }
 
